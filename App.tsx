@@ -1,6 +1,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { GoogleGenAI, LiveServerMessage } from '@google/genai';
+// Import Modality from @google/genai to use in configuration
+import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { Message, ConnectionStatus } from './types';
 import { MODEL_NAME, SYSTEM_INSTRUCTION, DEFAULT_VOICE } from './constants';
 import { encode, decode, decodeAudioData } from './services/audioUtils';
@@ -72,10 +73,18 @@ const App: React.FC = () => {
     isConnectingRef.current = true;
     
     try {
+      const apiKey = process.env.API_KEY;
+      if (!apiKey) {
+        console.error("Neural Link Failure: API_KEY is missing from environment.");
+        setStatus(ConnectionStatus.ERROR);
+        isConnectingRef.current = false;
+        return;
+      }
+
       setHasStarted(true);
       setStatus(ConnectionStatus.CONNECTING);
       
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey });
       const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       
@@ -165,7 +174,8 @@ const App: React.FC = () => {
           onclose: () => { stopSession(); }
         },
         config: {
-          responseModalities: ['AUDIO'],
+          // Fixed type error: use Modality.AUDIO enum instead of string literal 'AUDIO'
+          responseModalities: [Modality.AUDIO],
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: DEFAULT_VOICE } } },
           systemInstruction: SYSTEM_INSTRUCTION,
           outputAudioTranscription: {},
@@ -245,9 +255,14 @@ const App: React.FC = () => {
         <div className="fixed bottom-14 z-50 flex flex-col items-center gap-8 w-full max-w-xl px-6">
           
           {status === ConnectionStatus.ERROR && (
-             <div className="bg-red-950/40 border border-red-500/30 px-6 py-3 rounded flex items-center gap-4 mb-4">
-                <span className="text-[10px] uppercase font-bold text-red-400 tracking-widest">Connection Interrupted</span>
-                <button onClick={() => { stopSession(); startSession(); }} className="text-[10px] font-black text-white hover:text-red-400 underline uppercase tracking-widest">Reinitialize</button>
+             <div className="bg-red-950/40 border border-red-500/30 px-6 py-3 rounded flex flex-col items-center gap-3 mb-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] uppercase font-bold text-red-400 tracking-widest">Neural Link Offline</span>
+                  <button onClick={() => { stopSession(); startSession(); }} className="text-[10px] font-black text-white hover:text-red-400 underline uppercase tracking-widest">Reinitialize</button>
+                </div>
+                {!process.env.API_KEY && (
+                  <p className="text-[8px] text-red-400/60 uppercase tracking-tighter">Diagnostic: API_KEY missing from host environment</p>
+                )}
              </div>
           )}
 

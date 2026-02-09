@@ -60,6 +60,11 @@
       z-index: 5;
     }
   </style>
+  <script>
+    // Browser Safety Bridge: Ensures 'process.env' exists to prevent crash.
+    // In production, most bundlers or hosts will replace this or define it.
+    window.process = window.process || { env: {} };
+  </script>
   <script type="importmap">
   {
     "imports": {
