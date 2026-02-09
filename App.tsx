@@ -1,12 +1,11 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-// Import Modality from @google/genai to use in configuration
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
-import { Message, ConnectionStatus } from './types';
-import { MODEL_NAME, SYSTEM_INSTRUCTION, DEFAULT_VOICE } from './constants';
-import { encode, decode, decodeAudioData } from './services/audioUtils';
-import Visualizer from './components/Visualizer';
-import TranscriptList from './components/TranscriptList';
+import { Message, ConnectionStatus } from './types.ts';
+import { MODEL_NAME, SYSTEM_INSTRUCTION, DEFAULT_VOICE } from './constants.ts';
+import { encode, decode, decodeAudioData } from './services/audioUtils.ts';
+import Visualizer from './components/Visualizer.tsx';
+import TranscriptList from './components/TranscriptList.tsx';
 
 const App: React.FC = () => {
   const [status, setStatus] = useState<ConnectionStatus>(ConnectionStatus.DISCONNECTED);
@@ -174,7 +173,6 @@ const App: React.FC = () => {
           onclose: () => { stopSession(); }
         },
         config: {
-          // Fixed type error: use Modality.AUDIO enum instead of string literal 'AUDIO'
           responseModalities: [Modality.AUDIO],
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: DEFAULT_VOICE } } },
           systemInstruction: SYSTEM_INSTRUCTION,
@@ -193,7 +191,6 @@ const App: React.FC = () => {
 
   return (
     <div className="h-full w-full flex flex-col relative transition-all duration-1000">
-      {/* HUD Header */}
       <nav className="absolute top-0 left-0 right-0 p-8 flex justify-between items-start z-50">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-3">
@@ -219,8 +216,6 @@ const App: React.FC = () => {
       </nav>
 
       <main className="flex-1 flex flex-col items-center justify-center p-6 relative">
-        
-        {/* The Core Neural Visualizer */}
         <div className={`transition-all duration-[2000ms] z-30 ${hasStarted ? 'scale-75 -translate-y-40' : 'scale-100'}`}>
           <Visualizer 
             active={status === ConnectionStatus.CONNECTED} 
@@ -231,7 +226,6 @@ const App: React.FC = () => {
           />
         </div>
 
-        {/* HUD Data Stream (Transcripts) */}
         {hasStarted && (
            <div className="absolute inset-0 z-20 overflow-hidden pointer-events-none pt-48">
               <div className="h-full w-full max-w-4xl mx-auto flex flex-col pointer-events-auto no-scrollbar">
@@ -240,7 +234,6 @@ const App: React.FC = () => {
            </div>
         )}
 
-        {/* Real-time Insights (HUD Tooltip) */}
         {(currentInputRef.current || currentOutputRef.current) && (
            <div className="fixed bottom-52 left-0 right-0 z-40 flex justify-center px-12 pointer-events-none">
               <div className="hologram-glass px-8 py-5 border-l-4 border-amber-500/50 max-w-2xl text-center">
@@ -251,9 +244,7 @@ const App: React.FC = () => {
            </div>
         )}
 
-        {/* System Controls */}
         <div className="fixed bottom-14 z-50 flex flex-col items-center gap-8 w-full max-w-xl px-6">
-          
           {status === ConnectionStatus.ERROR && (
              <div className="bg-red-950/40 border border-red-500/30 px-6 py-3 rounded flex flex-col items-center gap-3 mb-4">
                 <div className="flex items-center gap-3">
@@ -315,7 +306,6 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Resource HUD */}
       {showResources && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-slate-950/80 backdrop-blur-2xl animate-in fade-in duration-500">
           <div className="hologram-glass p-12 max-w-xl w-full border-amber-500/20 space-y-10">
