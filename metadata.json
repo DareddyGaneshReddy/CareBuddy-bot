@@ -1,0 +1,7 @@
+{
+  "name": "CareBuddy",
+  "description": "A compassionate, empathetic AI companion providing a safe harbor for those feeling isolated or sad. Built with Gemini 2.5 Native Audio.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
