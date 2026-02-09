@@ -11,6 +11,7 @@ const App: React.FC = () => {
   const [status, setStatus] = useState<ConnectionStatus>(ConnectionStatus.DISCONNECTED);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isBuddySpeaking, setIsBuddySpeaking] = useState(false);
+  const [isBuddyThinking, setIsBuddyThinking] = useState(false);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showResources, setShowResources] = useState(false);
@@ -53,6 +54,7 @@ const App: React.FC = () => {
     cleanupAudio();
     setStatus(ConnectionStatus.DISCONNECTED);
     setIsBuddySpeaking(false);
+    setIsBuddyThinking(false);
     setIsUserSpeaking(false);
     isConnectingRef.current = false;
   }, [cleanupAudio]);
@@ -118,6 +120,7 @@ const App: React.FC = () => {
             if (message.serverContent?.inputTranscription) {
               currentInputRef.current += message.serverContent.inputTranscription.text;
             } else if (message.serverContent?.outputTranscription) {
+              setIsBuddyThinking(true);
               currentOutputRef.current += message.serverContent.outputTranscription.text;
             }
             if (message.serverContent?.turnComplete) {
@@ -125,6 +128,7 @@ const App: React.FC = () => {
               if (currentOutputRef.current) addMessage('buddy', currentOutputRef.current);
               currentInputRef.current = '';
               currentOutputRef.current = '';
+              setIsBuddyThinking(false);
             }
             const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
             if (base64Audio && audioContextsRef.current) {
@@ -148,6 +152,7 @@ const App: React.FC = () => {
             if (message.serverContent?.interrupted) {
               cleanupAudio();
               setIsBuddySpeaking(false);
+              setIsBuddyThinking(false);
               currentOutputRef.current = '';
             }
           },
@@ -155,6 +160,7 @@ const App: React.FC = () => {
             console.error(err);
             setStatus(ConnectionStatus.ERROR);
             isConnectingRef.current = false;
+            setIsBuddyThinking(false);
           },
           onclose: () => { stopSession(); }
         },
@@ -209,6 +215,7 @@ const App: React.FC = () => {
           <Visualizer 
             active={status === ConnectionStatus.CONNECTED} 
             isBuddy={isBuddySpeaking} 
+            isThinking={isBuddyThinking}
             isSpeaking={(isBuddySpeaking || isUserSpeaking) && status === ConnectionStatus.CONNECTED} 
             isMuted={isMuted}
           />
