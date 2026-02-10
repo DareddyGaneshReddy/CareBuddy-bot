@@ -9,10 +9,7 @@ import TranscriptList from './components/TranscriptList.tsx';
 import Logo from './components/Logo.tsx';
 import HighlightsOverlay from './components/HighlightsOverlay.tsx';
 
-type ViewState = 'landing' | 'login' | 'app';
-
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<ViewState>('landing');
   const [showHighlights, setShowHighlights] = useState(false);
   const [status, setStatus] = useState<ConnectionStatus>(ConnectionStatus.DISCONNECTED);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -34,9 +31,9 @@ const App: React.FC = () => {
   const currentOutputRef = useRef('');
 
   const starters = [
-    "I had a long day.",
-    "Just feeling a bit lonely.",
-    "I need someone to listen.",
+    "I had a really long day.",
+    "I'm feeling a bit lonely.",
+    "I just need someone to listen.",
     "Let's just talk."
   ];
 
@@ -127,10 +124,7 @@ const App: React.FC = () => {
               const inputData = e.inputBuffer.getChannelData(0);
               const sum = inputData.reduce((acc, val) => acc + Math.abs(val), 0);
               const avg = sum / inputData.length;
-              
-              // Higher sensitivity for snappier feeling
-              const isNowSpeaking = avg > 0.01;
-              if (isNowSpeaking !== isUserSpeaking) setIsUserSpeaking(isNowSpeaking);
+              setIsUserSpeaking(avg > 0.015);
               
               const int16 = new Int16Array(inputData.length);
               for (let i = 0; i < inputData.length; i++) {
@@ -147,9 +141,8 @@ const App: React.FC = () => {
           onmessage: async (message: LiveServerMessage) => {
             if (message.serverContent?.inputTranscription) {
               currentInputRef.current += message.serverContent.inputTranscription.text;
-              // Immediate visual feedback that we're processing
-              setIsBuddyThinking(true);
             } else if (message.serverContent?.outputTranscription) {
+              setIsBuddyThinking(true);
               currentOutputRef.current += message.serverContent.outputTranscription.text;
             }
             if (message.serverContent?.turnComplete) {
@@ -162,7 +155,6 @@ const App: React.FC = () => {
             const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
             if (base64Audio && audioContextsRef.current) {
               setIsBuddySpeaking(true);
-              setIsBuddyThinking(false);
               const audioCtx = audioContextsRef.current.output;
               nextStartTimeRef.current = Math.max(nextStartTimeRef.current, audioCtx.currentTime);
               try {
@@ -204,7 +196,6 @@ const App: React.FC = () => {
       });
       sessionRef.current = await sessionPromise;
     } catch (error) { 
-      console.error("Connection error:", error);
       setStatus(ConnectionStatus.ERROR); 
       isConnectingRef.current = false;
     }
@@ -212,75 +203,6 @@ const App: React.FC = () => {
 
   const toggleMute = () => setIsMuted(prev => !prev);
 
-  // Render Landing View
-  if (currentView === 'landing') {
-    return (
-      <div className="h-full w-full flex flex-col items-center justify-center p-8 animate-in fade-in duration-1000">
-        <div className="max-w-4xl w-full flex flex-col items-center text-center space-y-12">
-          <Logo onClick={() => setShowHighlights(true)} size="large" />
-          <div className="space-y-6">
-            <h1 className="serif text-6xl md:text-8xl text-slate-100 font-light tracking-tight">
-              A place to <span className="text-amber-500 italic">just be</span>.
-            </h1>
-            <p className="text-slate-500 text-lg md:text-xl font-light max-w-2xl mx-auto leading-relaxed">
-              CareBuddy is here to listen when the world feels too loud. No judgment, no rush—just a steady presence for when you need to talk.
-            </p>
-          </div>
-          <button 
-            onClick={() => setCurrentView('login')}
-            className="group relative px-12 py-5 overflow-hidden transition-all duration-500"
-          >
-            <div className="absolute inset-0 bg-amber-500 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
-            <div className="relative border border-amber-500/50 px-12 py-5 group-hover:border-transparent transition-colors duration-500">
-              <span className="text-amber-500 group-hover:text-slate-950 font-black uppercase tracking-[0.4em] text-xs transition-colors duration-500">
-                Let's Talk
-              </span>
-            </div>
-          </button>
-        </div>
-        {showHighlights && <HighlightsOverlay onClose={() => setShowHighlights(false)} />}
-      </div>
-    );
-  }
-
-  // Render Login View
-  if (currentView === 'login') {
-    return (
-      <div className="h-full w-full flex flex-col items-center justify-center p-8 animate-in slide-in-from-bottom-8 duration-700">
-        <div className="hologram-glass p-10 md:p-16 max-w-md w-full border-amber-500/20 space-y-10 relative">
-          <div className="absolute -top-12 left-1/2 -translate-x-1/2">
-            <Logo size="small" />
-          </div>
-          <div className="text-center space-y-2 pt-4">
-            <h2 className="serif text-3xl text-slate-100 font-light italic">Welcome back.</h2>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Please sign in to continue</p>
-          </div>
-          
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <button 
-                onClick={() => setCurrentView('app')}
-                className="w-full flex items-center justify-center gap-4 bg-slate-900 border border-slate-800 py-4 hover:border-amber-500/50 transition-all group"
-              >
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-amber-500">Continue with Google</span>
-              </button>
-              <button 
-                onClick={() => setCurrentView('app')}
-                className="w-full flex items-center justify-center gap-4 bg-slate-900 border border-slate-800 py-4 hover:border-amber-500/50 transition-all group"
-              >
-                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-amber-500">Use Email Address</span>
-              </button>
-            </div>
-            <p className="text-[9px] text-slate-600 text-center uppercase tracking-tighter leading-relaxed">
-              Your conversations are private and stay only between you and your CareBuddy.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Render Main App View
   return (
     <div className={`h-full w-full flex flex-col relative transition-all duration-[3000ms] ${status === ConnectionStatus.CONNECTED ? 'bg-[#0f0a1a]' : 'bg-transparent'}`}>
       <nav className="absolute top-0 left-0 right-0 p-8 flex justify-between items-start z-50">
@@ -289,10 +211,10 @@ const App: React.FC = () => {
             <Logo onClick={() => setShowHighlights(true)} size="small" />
             <h1 className="text-2xl font-black tracking-tighter text-slate-100 uppercase">CareBuddy</h1>
           </div>
-          <div className="flex items-center gap-3 pl-14">
+          <div className="flex items-center gap-3 pl-12">
              <div className={`h-1 w-1 rounded-full ${status === ConnectionStatus.CONNECTED ? 'bg-amber-400 animate-pulse' : 'bg-slate-700'}`} />
              <span className="text-[9px] uppercase tracking-[0.3em] font-bold text-slate-500">
-               {status === ConnectionStatus.CONNECTED ? (isBuddyThinking ? 'Processing...' : 'I am listening') : 'Ready when you are'}
+               {status === ConnectionStatus.CONNECTED ? 'In Session' : 'Standby'}
              </span>
           </div>
         </div>
@@ -302,7 +224,7 @@ const App: React.FC = () => {
             onClick={() => setShowResources(true)}
             className="text-[9px] uppercase tracking-widest font-black text-slate-400 hover:text-amber-500 transition-all px-6 py-2 border border-slate-800 bg-slate-900/40 hover:border-amber-500/50"
           >
-            Need help?
+            Resources
           </button>
         </div>
       </nav>
@@ -338,24 +260,24 @@ const App: React.FC = () => {
 
         <div className="fixed bottom-14 z-50 flex flex-col items-center gap-8 w-full max-w-xl px-6">
           {status === ConnectionStatus.ERROR && (
-             <div className="bg-red-950/40 border border-red-500/30 px-6 py-4 rounded-lg flex flex-col items-center gap-4 mb-4 backdrop-blur-md shadow-2xl animate-in fade-in slide-in-from-top-4">
-                <span className="text-[11px] uppercase font-bold text-red-400 tracking-widest">Something went wrong</span>
-                <button onClick={() => { stopSession(); startSession(); }} className="px-4 py-1.5 border border-red-500/40 text-[9px] font-black text-white hover:bg-red-500/20 uppercase tracking-widest transition-all">Try again</button>
+             <div className="bg-red-950/40 border border-red-500/30 px-6 py-3 rounded flex flex-col items-center gap-3 mb-4 backdrop-blur-md">
+                <span className="text-[10px] uppercase font-bold text-red-400 tracking-widest">Signal Error</span>
+                <button onClick={() => { stopSession(); startSession(); }} className="text-[10px] font-black text-white hover:text-red-400 underline uppercase tracking-widest">Retry Connection</button>
              </div>
           )}
 
           {!hasStarted || status === ConnectionStatus.DISCONNECTED ? (
             <div className="flex flex-col items-center gap-10 animate-in fade-in duration-1000">
               <div className="text-center space-y-4">
-                <h2 className="serif text-4xl md:text-5xl text-slate-100 font-light tracking-tight leading-tight">Ready to talk? <br/> <span className="text-amber-500 italic">I'm listening.</span></h2>
+                <h2 className="serif text-4xl md:text-5xl text-slate-100 font-light tracking-tight leading-tight">Take a moment. <br/> <span className="text-amber-500 italic">I'm here to listen.</span></h2>
               </div>
               
-              <div className="flex flex-wrap justify-center gap-3 max-w-md animate-in slide-in-from-bottom-10 duration-1000 delay-300">
+              <div className="flex flex-wrap justify-center gap-3 max-w-md">
                 {starters.map((text, i) => (
                   <button 
                     key={i}
                     onClick={startSession}
-                    className="px-5 py-2.5 bg-slate-900/50 border border-slate-800 hover:border-amber-500/40 hover:text-amber-400 text-slate-500 text-[11px] font-bold uppercase tracking-widest transition-all rounded-full"
+                    className="px-5 py-2 bg-slate-900/40 border border-slate-800 hover:border-amber-500/40 hover:text-amber-400 text-slate-500 text-[10px] font-bold uppercase tracking-widest transition-all rounded-full"
                   >
                     {text}
                   </button>
@@ -367,13 +289,14 @@ const App: React.FC = () => {
                 disabled={status === ConnectionStatus.CONNECTING}
                 className="group flex flex-col items-center"
               >
-                <div className="w-20 h-20 border border-slate-800 group-hover:border-amber-500/50 flex items-center justify-center transition-all duration-700 relative">
-                   <div className="w-14 h-14 bg-amber-500 flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.4)] group-hover:bg-amber-400 transition-colors">
-                      <span className="text-black font-black text-xs uppercase tracking-tighter">{status === ConnectionStatus.CONNECTING ? '...' : 'Start'}</span>
+                <div className="w-24 h-24 border border-slate-800 group-hover:border-amber-500/50 flex items-center justify-center transition-all duration-700 relative">
+                   <div className="absolute inset-0 border border-amber-500/10 scale-125 group-hover:scale-150 transition-transform"></div>
+                   <div className="w-16 h-16 bg-amber-500 flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.4)] group-hover:bg-amber-400 transition-colors">
+                      <span className="text-black font-black text-xs uppercase tracking-tighter">{status === ConnectionStatus.CONNECTING ? '...' : 'In'}</span>
                    </div>
                 </div>
-                <div className="mt-6 flex flex-col items-center gap-1">
-                   <span className="text-[9px] uppercase tracking-[0.5em] font-black text-slate-600 group-hover:text-amber-500 transition-colors">Begin Conversation</span>
+                <div className="mt-8 flex flex-col items-center gap-1">
+                   <span className="text-[9px] uppercase tracking-[0.5em] font-black text-slate-600 group-hover:text-amber-500 transition-colors">Begin Presence</span>
                 </div>
               </button>
             </div>
@@ -385,7 +308,7 @@ const App: React.FC = () => {
                   className={`hologram-glass group flex items-center gap-3 px-8 py-3 transition-all ${isMuted ? 'border-amber-500 bg-amber-500/10' : 'hover:border-amber-500/30'}`}
                 >
                   <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isMuted ? 'text-amber-400' : 'text-slate-400'}`}>
-                    {isMuted ? 'Muted' : 'I hear you'}
+                    {isMuted ? 'Muted' : 'Listening'}
                   </span>
                 </button>
 
@@ -393,7 +316,7 @@ const App: React.FC = () => {
                   onClick={stopSession}
                   className="hologram-glass group flex items-center gap-3 px-8 py-3 border-red-500/20 hover:border-red-500/50 text-slate-500 hover:text-red-400 transition-all"
                 >
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">End Chat</span>
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">End Session</span>
                 </button>
               </div>
             )
@@ -405,9 +328,9 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-slate-950/80 backdrop-blur-2xl animate-in fade-in duration-500">
           <div className="hologram-glass p-12 max-w-xl w-full border-amber-500/20 space-y-10">
              <div className="space-y-4">
-                <h2 className="serif text-4xl text-slate-100 font-light">Human Support.</h2>
+                <h2 className="serif text-4xl text-slate-100 font-light">Additional Support.</h2>
                 <p className="text-slate-500 text-sm leading-relaxed font-light">
-                  I'm here for you, but sometimes talking to a real person is the best next step. These people are ready to help.
+                  When you need to speak with a professional, please reach out to these resources.
                 </p>
              </div>
              <div className="grid gap-4">
@@ -424,7 +347,7 @@ const App: React.FC = () => {
                    </div>
                 </a>
              </div>
-             <button onClick={() => setShowResources(false)} className="w-full py-4 text-[10px] uppercase tracking-[0.4em] font-black text-slate-500 hover:text-amber-500 transition-colors">Back</button>
+             <button onClick={() => setShowResources(false)} className="w-full py-4 text-[10px] uppercase tracking-[0.4em] font-black text-slate-500 hover:text-amber-500 transition-colors">Close</button>
           </div>
         </div>
       )}
