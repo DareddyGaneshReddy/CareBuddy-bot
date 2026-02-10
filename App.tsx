@@ -34,10 +34,10 @@ const App: React.FC = () => {
   const currentOutputRef = useRef('');
 
   const starters = [
-    "I had a really long day.",
-    "I'm feeling a bit lonely.",
-    "I just need someone to listen.",
-    "Let's just talk about anything."
+    "I had a long day.",
+    "Just feeling a bit lonely.",
+    "I need someone to listen.",
+    "Let's just talk."
   ];
 
   useEffect(() => {
@@ -127,7 +127,10 @@ const App: React.FC = () => {
               const inputData = e.inputBuffer.getChannelData(0);
               const sum = inputData.reduce((acc, val) => acc + Math.abs(val), 0);
               const avg = sum / inputData.length;
-              setIsUserSpeaking(avg > 0.015);
+              
+              // Higher sensitivity for snappier feeling
+              const isNowSpeaking = avg > 0.01;
+              if (isNowSpeaking !== isUserSpeaking) setIsUserSpeaking(isNowSpeaking);
               
               const int16 = new Int16Array(inputData.length);
               for (let i = 0; i < inputData.length; i++) {
@@ -144,8 +147,9 @@ const App: React.FC = () => {
           onmessage: async (message: LiveServerMessage) => {
             if (message.serverContent?.inputTranscription) {
               currentInputRef.current += message.serverContent.inputTranscription.text;
-            } else if (message.serverContent?.outputTranscription) {
+              // Immediate visual feedback that we're processing
               setIsBuddyThinking(true);
+            } else if (message.serverContent?.outputTranscription) {
               currentOutputRef.current += message.serverContent.outputTranscription.text;
             }
             if (message.serverContent?.turnComplete) {
@@ -158,6 +162,7 @@ const App: React.FC = () => {
             const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
             if (base64Audio && audioContextsRef.current) {
               setIsBuddySpeaking(true);
+              setIsBuddyThinking(false);
               const audioCtx = audioContextsRef.current.output;
               nextStartTimeRef.current = Math.max(nextStartTimeRef.current, audioCtx.currentTime);
               try {
@@ -215,10 +220,10 @@ const App: React.FC = () => {
           <Logo onClick={() => setShowHighlights(true)} size="large" />
           <div className="space-y-6">
             <h1 className="serif text-6xl md:text-8xl text-slate-100 font-light tracking-tight">
-              A place to be <span className="text-amber-500 italic">yourself</span>.
+              A place to <span className="text-amber-500 italic">just be</span>.
             </h1>
             <p className="text-slate-500 text-lg md:text-xl font-light max-w-2xl mx-auto leading-relaxed">
-              When everything feels a bit much, CareBuddy is here to listen. No judgment, no rush—just a steady presence for when you need it most.
+              CareBuddy is here to listen when the world feels too loud. No judgment, no rush—just a steady presence for when you need to talk.
             </p>
           </div>
           <button 
@@ -244,10 +249,10 @@ const App: React.FC = () => {
       <div className="h-full w-full flex flex-col items-center justify-center p-8 animate-in slide-in-from-bottom-8 duration-700">
         <div className="hologram-glass p-10 md:p-16 max-w-md w-full border-amber-500/20 space-y-10 relative">
           <div className="absolute -top-12 left-1/2 -translate-x-1/2">
-            <Logo onClick={() => setShowHighlights(true)} size="small" />
+            <Logo size="small" />
           </div>
           <div className="text-center space-y-2 pt-4">
-            <h2 className="serif text-3xl text-slate-100 font-light italic">Welcome.</h2>
+            <h2 className="serif text-3xl text-slate-100 font-light italic">Welcome back.</h2>
             <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Please sign in to continue</p>
           </div>
           
@@ -267,11 +272,10 @@ const App: React.FC = () => {
               </button>
             </div>
             <p className="text-[9px] text-slate-600 text-center uppercase tracking-tighter leading-relaxed">
-              Your conversations are private and stays only between you and your CareBuddy.
+              Your conversations are private and stay only between you and your CareBuddy.
             </p>
           </div>
         </div>
-        {showHighlights && <HighlightsOverlay onClose={() => setShowHighlights(false)} />}
       </div>
     );
   }
@@ -285,10 +289,10 @@ const App: React.FC = () => {
             <Logo onClick={() => setShowHighlights(true)} size="small" />
             <h1 className="text-2xl font-black tracking-tighter text-slate-100 uppercase">CareBuddy</h1>
           </div>
-          <div className="flex items-center gap-3 pl-12">
+          <div className="flex items-center gap-3 pl-14">
              <div className={`h-1 w-1 rounded-full ${status === ConnectionStatus.CONNECTED ? 'bg-amber-400 animate-pulse' : 'bg-slate-700'}`} />
              <span className="text-[9px] uppercase tracking-[0.3em] font-bold text-slate-500">
-               {status === ConnectionStatus.CONNECTED ? 'I am listening' : 'Ready when you are'}
+               {status === ConnectionStatus.CONNECTED ? (isBuddyThinking ? 'Processing...' : 'I am listening') : 'Ready when you are'}
              </span>
           </div>
         </div>
@@ -298,7 +302,7 @@ const App: React.FC = () => {
             onClick={() => setShowResources(true)}
             className="text-[9px] uppercase tracking-widest font-black text-slate-400 hover:text-amber-500 transition-all px-6 py-2 border border-slate-800 bg-slate-900/40 hover:border-amber-500/50"
           >
-            Need more help?
+            Need help?
           </button>
         </div>
       </nav>
@@ -381,7 +385,7 @@ const App: React.FC = () => {
                   className={`hologram-glass group flex items-center gap-3 px-8 py-3 transition-all ${isMuted ? 'border-amber-500 bg-amber-500/10' : 'hover:border-amber-500/30'}`}
                 >
                   <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isMuted ? 'text-amber-400' : 'text-slate-400'}`}>
-                    {isMuted ? 'Muted' : 'I can hear you'}
+                    {isMuted ? 'Muted' : 'I hear you'}
                   </span>
                 </button>
 
