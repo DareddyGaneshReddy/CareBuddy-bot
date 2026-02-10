@@ -31,9 +31,9 @@ const App: React.FC = () => {
   const currentOutputRef = useRef('');
 
   const starters = [
-    "I had a really long day.",
-    "I'm feeling a bit lonely.",
-    "I just need someone to listen.",
+    "I had a long day.",
+    "Just feeling a bit lonely.",
+    "I need someone to listen.",
     "Let's just talk."
   ];
 
@@ -114,7 +114,7 @@ const App: React.FC = () => {
             setStatus(ConnectionStatus.CONNECTED);
             isConnectingRef.current = false;
             const source = inputCtx.createMediaStreamSource(stream);
-            const scriptProcessor = inputCtx.createScriptProcessor(4096, 1, 1);
+            const scriptProcessor = inputCtx.createScriptProcessor(2048, 1, 1);
             
             scriptProcessor.onaudioprocess = (e) => {
               if (isMutedRef.current || !sessionRef.current) {
@@ -124,7 +124,9 @@ const App: React.FC = () => {
               const inputData = e.inputBuffer.getChannelData(0);
               const sum = inputData.reduce((acc, val) => acc + Math.abs(val), 0);
               const avg = sum / inputData.length;
-              setIsUserSpeaking(avg > 0.015);
+              
+              const isNowSpeaking = avg > 0.012;
+              if (isNowSpeaking !== isUserSpeaking) setIsUserSpeaking(isNowSpeaking);
               
               const int16 = new Int16Array(inputData.length);
               for (let i = 0; i < inputData.length; i++) {
@@ -141,8 +143,8 @@ const App: React.FC = () => {
           onmessage: async (message: LiveServerMessage) => {
             if (message.serverContent?.inputTranscription) {
               currentInputRef.current += message.serverContent.inputTranscription.text;
+              setIsBuddyThinking(true); // Instant thinking trigger
             } else if (message.serverContent?.outputTranscription) {
-              setIsBuddyThinking(true);
               currentOutputRef.current += message.serverContent.outputTranscription.text;
             }
             if (message.serverContent?.turnComplete) {
@@ -155,6 +157,7 @@ const App: React.FC = () => {
             const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
             if (base64Audio && audioContextsRef.current) {
               setIsBuddySpeaking(true);
+              setIsBuddyThinking(false);
               const audioCtx = audioContextsRef.current.output;
               nextStartTimeRef.current = Math.max(nextStartTimeRef.current, audioCtx.currentTime);
               try {
@@ -179,7 +182,7 @@ const App: React.FC = () => {
             }
           },
           onerror: (err) => { 
-            console.error(err);
+            console.error("Session Error:", err);
             setStatus(ConnectionStatus.ERROR);
             isConnectingRef.current = false;
             setIsBuddyThinking(false);
@@ -196,6 +199,7 @@ const App: React.FC = () => {
       });
       sessionRef.current = await sessionPromise;
     } catch (error) { 
+      console.error("Startup Error:", error);
       setStatus(ConnectionStatus.ERROR); 
       isConnectingRef.current = false;
     }
@@ -211,10 +215,10 @@ const App: React.FC = () => {
             <Logo onClick={() => setShowHighlights(true)} size="small" />
             <h1 className="text-2xl font-black tracking-tighter text-slate-100 uppercase">CareBuddy</h1>
           </div>
-          <div className="flex items-center gap-3 pl-12">
+          <div className="flex items-center gap-3 pl-14">
              <div className={`h-1 w-1 rounded-full ${status === ConnectionStatus.CONNECTED ? 'bg-amber-400 animate-pulse' : 'bg-slate-700'}`} />
              <span className="text-[9px] uppercase tracking-[0.3em] font-bold text-slate-500">
-               {status === ConnectionStatus.CONNECTED ? 'In Session' : 'Standby'}
+               {status === ConnectionStatus.CONNECTED ? (isBuddyThinking ? 'Processing...' : 'Ready to listen') : 'Ready'}
              </span>
           </div>
         </div>
@@ -260,24 +264,24 @@ const App: React.FC = () => {
 
         <div className="fixed bottom-14 z-50 flex flex-col items-center gap-8 w-full max-w-xl px-6">
           {status === ConnectionStatus.ERROR && (
-             <div className="bg-red-950/40 border border-red-500/30 px-6 py-3 rounded flex flex-col items-center gap-3 mb-4 backdrop-blur-md">
-                <span className="text-[10px] uppercase font-bold text-red-400 tracking-widest">Signal Error</span>
-                <button onClick={() => { stopSession(); startSession(); }} className="text-[10px] font-black text-white hover:text-red-400 underline uppercase tracking-widest">Retry Connection</button>
+             <div className="bg-red-950/40 border border-red-500/30 px-6 py-4 rounded-lg flex flex-col items-center gap-4 mb-4 backdrop-blur-md shadow-2xl animate-in fade-in slide-in-from-top-4">
+                <span className="text-[11px] uppercase font-bold text-red-400 tracking-widest">Signal Error</span>
+                <button onClick={() => { stopSession(); startSession(); }} className="px-4 py-1.5 border border-red-500/40 text-[9px] font-black text-white hover:bg-red-500/20 uppercase tracking-widest transition-all">Retry Connection</button>
              </div>
           )}
 
           {!hasStarted || status === ConnectionStatus.DISCONNECTED ? (
             <div className="flex flex-col items-center gap-10 animate-in fade-in duration-1000">
               <div className="text-center space-y-4">
-                <h2 className="serif text-4xl md:text-5xl text-slate-100 font-light tracking-tight leading-tight">Take a moment. <br/> <span className="text-amber-500 italic">I'm here to listen.</span></h2>
+                <h2 className="serif text-4xl md:text-5xl text-slate-100 font-light tracking-tight leading-tight">Ready to talk? <br/> <span className="text-amber-500 italic">I'm listening.</span></h2>
               </div>
               
-              <div className="flex flex-wrap justify-center gap-3 max-w-md">
+              <div className="flex flex-wrap justify-center gap-3 max-w-md animate-in slide-in-from-bottom-10 duration-1000 delay-300">
                 {starters.map((text, i) => (
                   <button 
                     key={i}
                     onClick={startSession}
-                    className="px-5 py-2 bg-slate-900/40 border border-slate-800 hover:border-amber-500/40 hover:text-amber-400 text-slate-500 text-[10px] font-bold uppercase tracking-widest transition-all rounded-full"
+                    className="px-5 py-2.5 bg-slate-900/50 border border-slate-800 hover:border-amber-500/40 hover:text-amber-400 text-slate-500 text-[11px] font-bold uppercase tracking-widest transition-all rounded-full"
                   >
                     {text}
                   </button>
@@ -289,13 +293,12 @@ const App: React.FC = () => {
                 disabled={status === ConnectionStatus.CONNECTING}
                 className="group flex flex-col items-center"
               >
-                <div className="w-24 h-24 border border-slate-800 group-hover:border-amber-500/50 flex items-center justify-center transition-all duration-700 relative">
-                   <div className="absolute inset-0 border border-amber-500/10 scale-125 group-hover:scale-150 transition-transform"></div>
-                   <div className="w-16 h-16 bg-amber-500 flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.4)] group-hover:bg-amber-400 transition-colors">
-                      <span className="text-black font-black text-xs uppercase tracking-tighter">{status === ConnectionStatus.CONNECTING ? '...' : 'In'}</span>
+                <div className="w-20 h-20 border border-slate-800 group-hover:border-amber-500/50 flex items-center justify-center transition-all duration-700 relative">
+                   <div className="w-14 h-14 bg-amber-500 flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.4)] group-hover:bg-amber-400 transition-colors">
+                      <span className="text-black font-black text-xs uppercase tracking-tighter">{status === ConnectionStatus.CONNECTING ? '...' : 'Start'}</span>
                    </div>
                 </div>
-                <div className="mt-8 flex flex-col items-center gap-1">
+                <div className="mt-6 flex flex-col items-center gap-1">
                    <span className="text-[9px] uppercase tracking-[0.5em] font-black text-slate-600 group-hover:text-amber-500 transition-colors">Begin Presence</span>
                 </div>
               </button>
@@ -328,9 +331,9 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-slate-950/80 backdrop-blur-2xl animate-in fade-in duration-500">
           <div className="hologram-glass p-12 max-w-xl w-full border-amber-500/20 space-y-10">
              <div className="space-y-4">
-                <h2 className="serif text-4xl text-slate-100 font-light">Additional Support.</h2>
+                <h2 className="serif text-4xl text-slate-100 font-light">Human Support.</h2>
                 <p className="text-slate-500 text-sm leading-relaxed font-light">
-                  When you need to speak with a professional, please reach out to these resources.
+                  I'm here for you, but sometimes talking to a real person is the best next step. These people are ready to help.
                 </p>
              </div>
              <div className="grid gap-4">
