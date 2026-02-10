@@ -71,15 +71,18 @@ const App: React.FC = () => {
     if (isConnectingRef.current) return;
     isConnectingRef.current = true;
     
-    try {
-      const apiKey = process.env.API_KEY;
-      if (!apiKey) {
-        console.error("Neural Link Failure: API_KEY is missing from environment.");
-        setStatus(ConnectionStatus.ERROR);
-        isConnectingRef.current = false;
-        return;
-      }
+    // API KEY CHECK
+    // NOTE: This must be set in your deployment environment variables (e.g. Vercel/Netlify Dashboard)
+    const apiKey = "AIzaSyC_tcqDaCmoUV8K5OmHKXbWrZx2yijz_1o";
+    
+    if (!apiKey) {
+      console.error("Neural Link Failure: API_KEY is missing from environment.");
+      setStatus(ConnectionStatus.ERROR);
+      isConnectingRef.current = false;
+      return;
+    }
 
+    try {
       setHasStarted(true);
       setStatus(ConnectionStatus.CONNECTING);
       
@@ -182,6 +185,7 @@ const App: React.FC = () => {
       });
       sessionRef.current = await sessionPromise;
     } catch (error) { 
+      console.error("Connection error:", error);
       setStatus(ConnectionStatus.ERROR); 
       isConnectingRef.current = false;
     }
@@ -189,18 +193,21 @@ const App: React.FC = () => {
 
   const toggleMute = () => setIsMuted(prev => !prev);
 
+  // Check if API KEY is present for diagnostic display
+  const isApiKeyMissing = !process.env.API_KEY || process.env.API_KEY === "";
+
   return (
-    <div className="h-full w-full flex flex-col relative transition-all duration-1000">
+    <div className={`h-full w-full flex flex-col relative transition-all duration-[3000ms] ${status === ConnectionStatus.CONNECTED ? 'bg-[#0f0a1a]' : 'bg-transparent'}`}>
       <nav className="absolute top-0 left-0 right-0 p-8 flex justify-between items-start z-50">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-3">
-            <div className="w-1.5 h-6 bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
-            <h1 className="text-2xl font-black tracking-tighter text-slate-100 uppercase">System: CareBuddy</h1>
+            <div className={`w-1.5 h-6 transition-all duration-1000 ${status === ConnectionStatus.CONNECTED ? 'bg-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.8)]' : 'bg-slate-700'}`}></div>
+            <h1 className="text-2xl font-black tracking-tighter text-slate-100 uppercase">CareBuddy</h1>
           </div>
           <div className="flex items-center gap-3 pl-4">
              <div className={`h-1 w-1 rounded-full ${status === ConnectionStatus.CONNECTED ? 'bg-amber-400 animate-pulse' : 'bg-slate-700'}`} />
              <span className="text-[9px] uppercase tracking-[0.3em] font-bold text-slate-500">
-               {status === ConnectionStatus.CONNECTED ? 'Uplink Established' : 'System Standby'}
+               {status === ConnectionStatus.CONNECTED ? 'Deep Listening Mode' : 'System Standby'}
              </span>
           </div>
         </div>
@@ -210,7 +217,7 @@ const App: React.FC = () => {
             onClick={() => setShowResources(true)}
             className="text-[9px] uppercase tracking-widest font-black text-slate-400 hover:text-amber-500 transition-all px-6 py-2 border border-slate-800 bg-slate-900/40 hover:border-amber-500/50"
           >
-            Secondary Resources
+            Resources
           </button>
         </div>
       </nav>
@@ -236,7 +243,7 @@ const App: React.FC = () => {
 
         {(currentInputRef.current || currentOutputRef.current) && (
            <div className="fixed bottom-52 left-0 right-0 z-40 flex justify-center px-12 pointer-events-none">
-              <div className="hologram-glass px-8 py-5 border-l-4 border-amber-500/50 max-w-2xl text-center">
+              <div className="hologram-glass px-8 py-5 border-l-4 border-amber-500/50 max-w-2xl text-center shadow-2xl animate-in fade-in zoom-in-95 duration-500">
                  <p className="serif text-xl md:text-2xl text-slate-200 font-light italic leading-relaxed">
                    {currentOutputRef.current || currentInputRef.current}
                  </p>
@@ -246,13 +253,18 @@ const App: React.FC = () => {
 
         <div className="fixed bottom-14 z-50 flex flex-col items-center gap-8 w-full max-w-xl px-6">
           {status === ConnectionStatus.ERROR && (
-             <div className="bg-red-950/40 border border-red-500/30 px-6 py-3 rounded flex flex-col items-center gap-3 mb-4">
+             <div className="bg-red-950/40 border border-red-500/30 px-6 py-4 rounded-lg flex flex-col items-center gap-4 mb-4 backdrop-blur-md shadow-2xl animate-in fade-in slide-in-from-top-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-[10px] uppercase font-bold text-red-400 tracking-widest">Neural Link Offline</span>
-                  <button onClick={() => { stopSession(); startSession(); }} className="text-[10px] font-black text-white hover:text-red-400 underline uppercase tracking-widest">Reinitialize</button>
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  <span className="text-[11px] uppercase font-bold text-red-400 tracking-widest">Neural Link Offline</span>
                 </div>
-                {!process.env.API_KEY && (
-                  <p className="text-[8px] text-red-400/60 uppercase tracking-tighter">Diagnostic: API_KEY missing from host environment</p>
+                {isApiKeyMissing ? (
+                  <div className="text-center space-y-2">
+                    <p className="text-[10px] text-red-200 uppercase tracking-tighter">Diagnostic: API_KEY is missing</p>
+                    <p className="text-[8px] text-red-400/60 uppercase max-w-xs leading-relaxed">Please add your API Key to the Environment Variables in your deployment dashboard.</p>
+                  </div>
+                ) : (
+                  <button onClick={() => { stopSession(); startSession(); }} className="px-4 py-1.5 border border-red-500/40 text-[9px] font-black text-white hover:bg-red-500/20 uppercase tracking-widest transition-all">Attempt Reconnection</button>
                 )}
              </div>
           )}
@@ -260,9 +272,9 @@ const App: React.FC = () => {
           {!hasStarted || status === ConnectionStatus.DISCONNECTED ? (
             <div className="flex flex-col items-center gap-10 animate-in fade-in duration-1000">
               <div className="text-center space-y-4">
-                <h2 className="serif text-4xl md:text-5xl text-slate-100 font-light tracking-tight leading-tight">Grounded. Mature. <br/> <span className="text-amber-500 italic">I am here.</span></h2>
+                <h2 className="serif text-4xl md:text-5xl text-slate-100 font-light tracking-tight leading-tight">I'm here for you. <br/> <span className="text-amber-500 italic">Fully.</span></h2>
                 <p className="text-slate-500 text-xs tracking-[0.2em] font-medium uppercase max-w-xs mx-auto">
-                   Initiate secure neural uplink for emotional relief.
+                   Initiate secure neural uplink.
                 </p>
               </div>
               
@@ -278,7 +290,7 @@ const App: React.FC = () => {
                    </div>
                 </div>
                 <div className="mt-8 flex flex-col items-center gap-1">
-                   <span className="text-[9px] uppercase tracking-[0.5em] font-black text-slate-600 group-hover:text-amber-500 transition-colors">Activate Insight</span>
+                   <span className="text-[9px] uppercase tracking-[0.5em] font-black text-slate-600 group-hover:text-amber-500 transition-colors">Begin Presence</span>
                 </div>
               </button>
             </div>
@@ -290,7 +302,7 @@ const App: React.FC = () => {
                   className={`hologram-glass group flex items-center gap-3 px-8 py-3 transition-all ${isMuted ? 'border-amber-500 bg-amber-500/10' : 'hover:border-amber-500/30'}`}
                 >
                   <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isMuted ? 'text-amber-400' : 'text-slate-400'}`}>
-                    {isMuted ? 'Sensors Off' : 'Active Intake'}
+                    {isMuted ? 'Quiet Mode' : 'Listening'}
                   </span>
                 </button>
 
@@ -298,7 +310,7 @@ const App: React.FC = () => {
                   onClick={stopSession}
                   className="hologram-glass group flex items-center gap-3 px-8 py-3 border-red-500/20 hover:border-red-500/50 text-slate-500 hover:text-red-400 transition-all"
                 >
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Deactivate Hub</span>
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">End Session</span>
                 </button>
               </div>
             )
@@ -310,38 +322,27 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-slate-950/80 backdrop-blur-2xl animate-in fade-in duration-500">
           <div className="hologram-glass p-12 max-w-xl w-full border-amber-500/20 space-y-10">
              <div className="space-y-4">
-                <div className="text-amber-500 text-[10px] font-black uppercase tracking-[0.4em]">System Notice</div>
-                <h2 className="serif text-4xl text-slate-100 font-light">External Assistance Modules.</h2>
+                <div className="text-amber-500 text-[10px] font-black uppercase tracking-[0.4em]">Support HUD</div>
+                <h2 className="serif text-4xl text-slate-100 font-light">Human Connection Resources.</h2>
                 <p className="text-slate-500 text-sm leading-relaxed font-light">
-                  When current processing limits are exceeded, please interface with trained human response units. These are reliable and grounded resources.
+                  When digital presence isn't enough, please reach out to these specialized human support systems.
                 </p>
              </div>
              <div className="grid gap-4">
-                <a href="tel:988" className="hologram-glass p-8 border-l-2 border-amber-500/50 hover:bg-amber-500/5 transition-all flex justify-between items-center group">
+                <a href="tel:988" target="_blank" className="hologram-glass p-8 border-l-2 border-amber-500/50 hover:bg-amber-500/5 transition-all flex justify-between items-center group">
                    <div className="flex flex-col gap-1">
-                     <span className="text-slate-500 text-[9px] font-bold uppercase tracking-widest">Audio Uplink</span>
+                     <span className="text-slate-500 text-[9px] font-bold uppercase tracking-widest">Call</span>
                      <h3 className="text-xl font-bold text-slate-100 uppercase tracking-tight">988 Lifeline</h3>
                    </div>
-                   <div className="w-10 h-10 border border-slate-800 flex items-center justify-center group-hover:border-amber-500 transition-colors">
-                      <span className="text-amber-500">→</span>
-                   </div>
                 </a>
-                <a href="sms:741741" className="hologram-glass p-8 border-l-2 border-amber-500/50 hover:bg-amber-500/5 transition-all flex justify-between items-center group">
+                <a href="sms:741741" target="_blank" className="hologram-glass p-8 border-l-2 border-amber-500/50 hover:bg-amber-500/5 transition-all flex justify-between items-center group">
                    <div className="flex flex-col gap-1">
-                     <span className="text-slate-500 text-[9px] font-bold uppercase tracking-widest">Text Buffer</span>
-                     <h3 className="text-xl font-bold text-slate-100 uppercase tracking-tight">Crisis Messaging</h3>
-                   </div>
-                   <div className="w-10 h-10 border border-slate-800 flex items-center justify-center group-hover:border-amber-500 transition-colors">
-                      <span className="text-amber-500">→</span>
+                     <span className="text-slate-500 text-[9px] font-bold uppercase tracking-widest">Text</span>
+                     <h3 className="text-xl font-bold text-slate-100 uppercase tracking-tight">Crisis Text Line</h3>
                    </div>
                 </a>
              </div>
-             <button 
-               onClick={() => setShowResources(false)}
-               className="w-full py-4 text-[10px] uppercase tracking-[0.4em] font-black text-slate-500 hover:text-amber-500 transition-colors"
-             >
-                Close HUD
-             </button>
+             <button onClick={() => setShowResources(false)} className="w-full py-4 text-[10px] uppercase tracking-[0.4em] font-black text-slate-500 hover:text-amber-500 transition-colors">Close</button>
           </div>
         </div>
       )}
