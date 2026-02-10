@@ -26,7 +26,7 @@ const TranscriptList: React.FC<TranscriptListProps> = ({ messages }) => {
       {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full text-slate-700 space-y-10 text-center max-w-sm mx-auto animate-in fade-in duration-1000">
           <p className="serif text-3xl italic font-light tracking-wide leading-relaxed opacity-40">
-            "Your narrative is safe. <br/> Process at your own pace."
+            "I'm here whenever you're ready to talk."
           </p>
           <div className="w-px h-24 bg-gradient-to-b from-slate-800 to-transparent" />
         </div>
@@ -38,8 +38,8 @@ const TranscriptList: React.FC<TranscriptListProps> = ({ messages }) => {
           >
              <div className="max-w-[90%] md:max-w-[70%] space-y-4 group">
                 <div className={`flex items-center gap-4 ${msg.role === 'buddy' ? 'flex-row' : 'flex-row-reverse'}`}>
-                   <span className={`text-[8px] uppercase tracking-[0.5em] font-black transition-colors ${msg.role === 'buddy' ? 'text-amber-500' : 'text-slate-500'}`}>
-                      {msg.role === 'buddy' ? 'System_Buddy' : 'Subject_User'}
+                   <span className={`text-[9px] uppercase tracking-[0.3em] font-black transition-colors ${msg.role === 'buddy' ? 'text-amber-500' : 'text-slate-500'}`}>
+                      {msg.role === 'buddy' ? 'CareBuddy' : 'You'}
                    </span>
                    <div className="flex-1 w-12 h-px bg-slate-800" />
                 </div>
