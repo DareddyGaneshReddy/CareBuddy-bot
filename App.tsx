@@ -51,12 +51,18 @@ const App: React.FC = () => {
       } catch (e) {}
       audioContextsRef.current = null;
     }
+    
+    // Reset all states and refs to ensure a fresh start and erase previous session data
     cleanupAudio();
+    setMessages([]); // Erase the transcript history
+    currentInputRef.current = ''; // Erase pending input
+    currentOutputRef.current = ''; // Erase pending output
     setStatus(ConnectionStatus.DISCONNECTED);
     setIsBuddySpeaking(false);
     setIsBuddyThinking(false);
     setIsUserSpeaking(false);
     isConnectingRef.current = false;
+    setHasStarted(false); // Return to the splash screen
   }, [cleanupAudio]);
 
   const addMessage = (role: 'user' | 'buddy', text: string) => {
@@ -71,8 +77,6 @@ const App: React.FC = () => {
     if (isConnectingRef.current) return;
     isConnectingRef.current = true;
     
-    // API KEY CHECK
-    // NOTE: This must be set in your deployment environment variables (e.g. Vercel/Netlify Dashboard)
     const apiKey = "AIzaSyC_tcqDaCmoUV8K5OmHKXbWrZx2yijz_1o";
     
     if (!apiKey) {
@@ -193,7 +197,6 @@ const App: React.FC = () => {
 
   const toggleMute = () => setIsMuted(prev => !prev);
 
-  // Check if API KEY is present for diagnostic display
   const isApiKeyMissing = !process.env.API_KEY || process.env.API_KEY === "";
 
   return (
